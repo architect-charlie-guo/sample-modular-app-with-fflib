@@ -1,0 +1,122 @@
+@startuml Application Architecture
+
+' Components
+package "Main Application" {
+    [OrderController] as Controller
+    [Orders Application] as App
+    [OrdersService] as Service
+    [Orders Domain] as Domain
+    [OrdersSelector] as Selector
+    [Unit of Work] as UOW
+    
+    interface "IOrdersService" as IService
+    interface "IOrders" as IDomain
+    interface "IOrdersSelector" as ISelector
+    
+    ' Define extension points
+    interface "IBeforeOrderProcess" as BeforeExt
+    interface "IAfterOrderProcess" as AfterExt
+    interface "IPricingCalculator" as PricingExt
+}
+
+package "Extensions" {
+    [ComplianceExtension] as CompExt
+    [CustomPricingCalculator] as PriceExt
+}
+
+package "Force-DI" {
+    [di_Injector] as DI
+    [di_Module] as Module
+}
+
+package "fflib-apex-common" {
+    [fflib_SObjectSelector] as FFSelector
+    [fflib_SObjectDomain] as FFDomain
+    [fflib_ISObjectUnitOfWork] as FFUOW
+}
+
+' Define relationships
+Controller --> App : uses
+App --> IService : factory methods
+App --> ISelector : factory methods
+App --> IDomain : factory methods
+
+Service ..|> IService : implements
+Domain ..|> IDomain : implements
+Selector ..|> ISelector : implements
+
+Service --> Selector : uses
+Service --> Domain : uses
+Service --> UOW : uses
+Service --> BeforeExt : executes
+Service --> AfterExt : executes
+Domain --> PricingExt : uses
+
+DI --> IService : injects
+DI --> ISelector : injects
+DI --> BeforeExt : discovers
+DI --> AfterExt : discovers
+DI --> PricingExt : discovers
+
+CompExt ..|> BeforeExt : implements
+PriceExt ..|> PricingExt : implements
+
+Module <|-- "CoreModule" : extends
+Module <|-- "StandardModule" : extends
+Module <|-- "ComplianceModule" : extends
+Module <|-- "PricingModule" : extends
+
+FFSelector <|-- Selector : extends
+FFDomain <|-- Domain : extends
+
+' Notes and explanations
+note right of Controller
+  API entry point from UI
+  or integration
+end note
+
+note right of App
+  Factory methods that
+  use Force-DI to resolve
+  implementations
+end note
+
+note right of DI
+  Resolves dependencies
+  based on configured bindings
+end note
+
+note right of Service
+  Orchestrates business
+  processes and handles
+  extension points
+end note
+
+note bottom of Domain
+  Encapsulates business
+  logic specific to Orders
+end note
+
+note bottom of Selector
+  Handles database queries
+  for Order data
+end note
+
+note top of CompExt
+  Compliance validation
+  module that hooks into
+  main application
+end note
+
+note top of PriceExt
+  Custom pricing logic
+  that hooks into
+  main application
+end note
+
+note right of UOW
+  Manages database
+  transactions
+end note
+
+@enduml
